@@ -64,8 +64,7 @@ if uploaded_files and len(uploaded_files) == 9:
         st.success("✅ Optimization complete!")
 
         st.write("✍️ Step 4: Generating AI-powered summary...")
-        model_path = "models/flan-t5-small"
-        ai_report = generate_ai_summary(optimization_results, model_path=model_path)
+        ai_report = generate_ai_summary(optimization_results)
         st.success("✅ AI summary generated!")
 
         st.divider()
