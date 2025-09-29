@@ -33,3 +33,14 @@ def plot_orders_by_day_of_week(df):
     ax.set_ylabel('Number of Orders')
     plt.setp(ax.get_xticklabels(), rotation=45)
     return fig
+# Add this function to the end of src/plotting.py
+def plot_forecast(history, forecast):
+    """Generates a plot of historical sales and the forecast."""
+    fig, ax = plt.subplots(figsize=(15, 7))
+    history.plot(ax=ax, label='Historical Sales')
+    forecast.plot(ax=ax, label='Forecasted Sales', style='--')
+    ax.set_title('Sales Forecast vs. Historical Data', fontsize=16)
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Total Sales')
+    ax.legend()
+    return fig
