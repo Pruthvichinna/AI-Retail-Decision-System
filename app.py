@@ -3,7 +3,6 @@
 import streamlit as st
 import pandas as pd
 from src.preprocess import load_and_preprocess_data
-from src.forecasting import train_forecasting_model # Not used yet, but good to have
 from src.optimization import run_promotion_optimization
 from src.insights import generate_ai_summary
 
@@ -17,21 +16,32 @@ st.set_page_config(
 # --- Title and Description ---
 st.title("🤖 Autonomous AI-Driven Retail Decision Support System")
 st.write("""
-Welcome to the future of retail management. This system automates the complex process of demand forecasting,
-promotion optimization, and insight generation. Click the button below to run the full analysis pipeline.
+This system automates the process of promotion optimization and insight generation.
+Upload your 9 Olist CSV files to begin the analysis.
 """)
 st.divider()
 
 # --- Main Application ---
-if st.button("▶️ Generate Weekly Promotion Plan"):
+# Create the file uploader
+uploaded_files = st.file_uploader(
+    "Upload your Olist CSV files",
+    accept_multiple_files=True,
+    type='csv'
+)
+
+# Check if the correct number of files have been uploaded
+if uploaded_files and len(uploaded_files) == 9:
     with st.spinner("Running full pipeline... This may take a few minutes..."):
+        
+        # Create a dictionary to pass to the processing function
+        file_dict = {file.name.split('_dataset')[0].replace('olist_', ''): file for file in uploaded_files}
         
         # --- Step 1: Data Preprocessing ---
         st.write("🔄 Step 1: Loading and preprocessing data...")
-        master_df = load_and_preprocess_data('data/')
+        master_df = load_and_preprocess_data(file_dict)
         st.success("✅ Data preprocessing complete!")
 
-        # --- Step 2: Prepare data for optimization (same logic as notebook) ---
+        # --- Step 2, 3, 4... (same as before) ---
         st.write("📊 Step 2: Preparing data for optimization...")
         min_date = master_df['order_purchase_timestamp'].min()
         max_date = master_df['order_purchase_timestamp'].max()
@@ -49,18 +59,17 @@ if st.button("▶️ Generate Weekly Promotion Plan"):
         product_summary['promo_demand_forecast'] = product_summary['weekly_demand_forecast'] * 1.2
         st.success("✅ Optimization data prepared!")
 
-        # --- Step 3: Run Promotion Optimization ---
         st.write("🧠 Step 3: Solving for the optimal promotion plan...")
         optimization_results = run_promotion_optimization(product_summary)
         st.success("✅ Optimization complete!")
 
-        # --- Step 4: Generate AI Insights ---
         st.write("✍️ Step 4: Generating AI-powered summary...")
         model_path = "models/flan-t5-small"
         ai_report = generate_ai_summary(optimization_results, model_path=model_path)
         st.success("✅ AI summary generated!")
 
-        # --- Final Output ---
         st.divider()
         st.subheader("🎉 Your Recommended Weekly Promotion Plan")
         st.markdown(ai_report)
+else:
+    st.info("Please upload all 9 required CSV files to start the analysis.")
