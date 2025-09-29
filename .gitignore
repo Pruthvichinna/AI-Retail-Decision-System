@@ -1,0 +1,18 @@
+# Data and Models
+data/
+models/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Generated reports (like our EDA file)
+docs/eda_report.html
+
+# OS-specific files
+.DS_Store
+Thumbs.db
