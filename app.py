@@ -1,5 +1,4 @@
 # app.py
-
 import streamlit as st
 import pandas as pd
 from src.preprocess import load_and_preprocess_data
@@ -8,26 +7,27 @@ from src.insights import generate_ai_summary
 from src.plotting import plot_delivery_time_distribution, plot_delivery_estimate_diff, plot_orders_by_day_of_week, plot_forecast
 from src.forecasting import train_forecasting_model, generate_forecast
 
-# --- Page Configuration ---
 st.set_page_config(page_title="AI Retail Decision Support System", page_icon="🤖", layout="wide")
-
-# --- Title and Description ---
 st.title("🤖 Autonomous AI-Driven Retail Decision Support System")
 st.write("Upload your 9 Olist CSV files to begin the analysis.")
 st.divider()
 
-# --- Main Application ---
 uploaded_files = st.file_uploader("Upload your Olist CSV files", accept_multiple_files=True, type='csv')
 
 if uploaded_files and len(uploaded_files) == 9:
-    # --- Step 1: Data Preprocessing & EDA ---
-    st.header("Step 1: Data Preprocessing & EDA")
-    with st.spinner("Loading and preprocessing data..."):
-        file_dict = {file.name.replace('olist_', '').replace('_dataset.csv', ''): file for file in uploaded_files}
+    # --- Perform all data-heavy operations once and cache them ---
+    @st.cache_data
+    def run_initial_analysis(files):
+        file_dict = {file.name.replace('olist_', '').replace('_dataset.csv', ''): file for file in files}
         master_df = load_and_preprocess_data(file_dict)
-    st.success("✅ Data preprocessing complete!")
-    st.dataframe(master_df.head())
+        daily_sales = master_df.set_index('order_purchase_timestamp')['price'].resample('D').sum().fillna(0)
+        return master_df, daily_sales
 
+    master_df, daily_sales = run_initial_analysis(uploaded_files)
+
+    # --- Display EDA and Forecasting sections ---
+    st.header("Step 1: Data Preprocessing & EDA")
+    st.dataframe(master_df.head())
     st.subheader("Exploratory Data Analysis")
     col1, col2 = st.columns(2)
     with col1:
@@ -37,29 +37,21 @@ if uploaded_files and len(uploaded_files) == 9:
     st.pyplot(plot_orders_by_day_of_week(master_df))
     st.divider()
 
-    # --- Step 2: Demand Forecasting ---
     st.header("Step 2: Demand Forecasting")
-    with st.spinner("Training forecasting model and generating forecast..."):
-        # Aggregate to daily sales
-        daily_sales = master_df.set_index('order_purchase_timestamp')['price'].resample('D').sum().fillna(0)
-
-        # Train model
-        model = train_forecasting_model(daily_sales)
-
-        # Generate forecast for the next 30 days
-        last_date = daily_sales.index.max()
-        forecast = generate_forecast(model, 30, last_date)
-
-        # Display the forecast plot
-        st.pyplot(plot_forecast(daily_sales.tail(180), forecast)) # Plot last 180 days of history + forecast
-    st.success("✅ Forecast generated successfully!")
+    model = train_forecasting_model(daily_sales)
+    last_date = daily_sales.index.max()
+    forecast = generate_forecast(model, 30, last_date)
+    st.pyplot(plot_forecast(daily_sales.tail(180), forecast))
     st.divider()
 
-    # --- Step 3: Generate Promotion Plan ---
-    st.header("Step 3: Generate Promotion Plan")
-    if st.button("▶️ Generate Weekly Promotion Plan"):
+    # --- Step 3: Interactive Promotion Plan ---
+    st.header("Step 3: Generate Promotion Plan (What-If Analysis)")
+
+    # Add the interactive slider for budget
+    budget = st.slider("Select Your Weekly Discount Budget ($)", min_value=100, max_value=2000, value=500, step=50)
+
+    if st.button("▶️ Generate Plan"):
         with st.spinner("Running optimization and AI summary..."):
-            # Prepare data for optimization
             min_date = master_df['order_purchase_timestamp'].min()
             max_date = master_df['order_purchase_timestamp'].max()
             number_of_weeks = (max_date - min_date).days / 7
@@ -72,14 +64,12 @@ if uploaded_files and len(uploaded_files) == 9:
             product_summary['discount_price'] = product_summary['avg_price'] * 0.90
             product_summary['promo_demand_forecast'] = product_summary['weekly_demand_forecast'] * 1.2
 
-            # Run Optimization
-            optimization_results = run_promotion_optimization(product_summary)
+            # Pass the selected budget to the function
+            optimization_results = run_promotion_optimization(product_summary, budget)
 
-            # Generate AI Insights
             ai_report = generate_ai_summary(optimization_results)
 
-            # --- Final Output ---
             st.subheader("🎉 Your Recommended Weekly Promotion Plan")
             st.markdown(ai_report)
 else:
-    st.info("Please upload all 9 required CSV files to start the analysis.")
+    st.info("Please upload all required CSV files to start the analysis.")
