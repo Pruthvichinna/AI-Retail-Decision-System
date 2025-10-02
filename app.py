@@ -40,7 +40,8 @@ if uploaded_files and len(uploaded_files) == 9:
     st.header("Step 2: Demand Forecasting")
     model = train_forecasting_model(daily_sales)
     last_date = daily_sales.index.max()
-    forecast = generate_forecast(model, 30, last_date)
+    # The argument is now `_model`
+    forecast = generate_forecast(_model=model, future_days=30, last_date=last_date)
     st.pyplot(plot_forecast(daily_sales.tail(180), forecast))
     st.divider()
 
